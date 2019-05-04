@@ -33,6 +33,13 @@
 #define VIDA 50
 #define MAXIMO_PASOS 4
 #define SIN_PASOS 0
+#define VIDA_PERDIDA_PASO 3
+#define SIN_AYUDAS 0
+#define SIN_VIDA 0
+#define EN_CURSO 0
+#define VICTORIA 1
+#define DERROTA -1
+#define POCA_VIDA 15
 
 //RESGISTROS...
 
@@ -85,8 +92,8 @@ typedef struct juego{
 //FUNCIONES...
 
 coordenada_t posicion_aleatoria(){
+
 	coordenada_t aleatoria;
-	srand ( (unsigned)time(NULL) );
 	aleatoria.col = rand()%TAMANIO;
 	aleatoria.fil = rand()%TAMANIO;
 
@@ -115,6 +122,7 @@ coordenada_t asignar_posicion ( char laberinto[TAMANIO][TAMANIO] ){
 }
 
 void mostrar_laberinto( char laberinto[TAMANIO][TAMANIO] ){
+
 	for ( int fila = 0; fila < TAMANIO; fila++ ){
 		for ( int columna = 0; columna < TAMANIO; columna++ ){
 			printf( "%c ", laberinto[fila][columna] );
@@ -124,6 +132,7 @@ void mostrar_laberinto( char laberinto[TAMANIO][TAMANIO] ){
 }
 
 void inicializar_obstaculos ( juego_t* juego, char laberinto_copia[TAMANIO][TAMANIO] ){
+
 	char obstaculos[TOTAL_OBSTACULOS] = { ESCREGUTO, ACROMANTULA, BOGGART};
 	int danio_obstaculos[TOTAL_OBSTACULOS] = { DANIO_ESCREGUTO, DANIO_ACROMANTULA, DANIO_BOGGART};
 
@@ -138,6 +147,7 @@ void inicializar_obstaculos ( juego_t* juego, char laberinto_copia[TAMANIO][TAMA
 }
 
 void inicializar_ayudas ( juego_t* juego , char laberinto_copia[TAMANIO][TAMANIO] ){
+
 	char ayudas[TOTAL_AYUDAS] = { IMPEDIMENTA, RIDDIKULUS, POCIONES, POCIONES, POCIONES, ESFINGE};
 
 	juego->tope_ayudas = TOTAL_AYUDAS;
@@ -154,6 +164,7 @@ void inicializar_ayudas ( juego_t* juego , char laberinto_copia[TAMANIO][TAMANIO
 }
 
 bool cumple_distancia_manhattan ( coordenada_t coordenada_uno, coordenada_t coordenada_dos ){
+
 	bool cumple = false;
 	int distancia_filas =  coordenada_uno.fil - coordenada_dos.fil;
 	int distancia_columnas = coordenada_uno.col - coordenada_dos.col;
@@ -165,11 +176,13 @@ bool cumple_distancia_manhattan ( coordenada_t coordenada_uno, coordenada_t coor
 }
 
 void inicializar_participantes ( juego_t* juego, char laberinto_copia[TAMANIO][TAMANIO] ){
+
 	juego->rival.posicion = asignar_posicion ( laberinto_copia );
 
 	while ( !cumple_distancia_manhattan ( juego->copa.posicion, juego->rival.posicion ) ){
 		juego->rival.posicion = asignar_posicion ( laberinto_copia );
 	}
+
 	laberinto_copia [juego->rival.posicion.fil][juego->rival.posicion.col] = RIVAL;
 	juego->rival.cantidad_pasos = MAXIMO_PASOS;
 	juego->rival.direccion = DERECHA;
@@ -179,24 +192,31 @@ void inicializar_participantes ( juego_t* juego, char laberinto_copia[TAMANIO][T
 	while ( !cumple_distancia_manhattan ( juego->copa.posicion, juego->jugador.posicion ) ){
 		juego->jugador.posicion = asignar_posicion ( laberinto_copia );		
 	}
-	laberinto_copia [juego->jugador.posicion.fil][juego->jugador.posicion.col] = JUGADOR;	
-	juego->jugador.tope_ayudas = TOTAL_AYUDAS;
-	juego->jugador.vida = VIDA; 
 
+	laberinto_copia [juego->jugador.posicion.fil][juego->jugador.posicion.col] = JUGADOR;	
+	juego->jugador.tope_ayudas = SIN_AYUDAS;
+	juego->jugador.vida = VIDA;
+}
+
+void copiar_matriz ( char matriz_a_copiar[TAMANIO][TAMANIO], char matriz_copia[TAMANIO][TAMANIO] ){
+
+	for ( int fila = 0; fila < TAMANIO; fila++ ){
+		for ( int columna = 0; columna < TAMANIO; columna++ ){
+			matriz_copia[fila][columna] = matriz_a_copiar[fila][columna];
+		}
+	}
 }
 
 void inicializar_laberinto( juego_t* juego ){
+
 	char laberinto_copia[TAMANIO][TAMANIO];
 
 	inicializar_paredes_laberinto ( juego->laberinto_original );
 
-	for ( int fila = 0; fila < TAMANIO; fila++ ){
-		for ( int columna = 0; columna < TAMANIO; columna++ ){
-			laberinto_copia[fila][columna] = juego->laberinto_original[fila][columna];
-		}
-	}
+	copiar_matriz ( juego->laberinto_original, laberinto_copia );
 
 	juego->copa.posicion = asignar_posicion ( juego->laberinto_original );
+	juego->copa.codigo = COPA;
 	laberinto_copia [juego->copa.posicion.fil][juego->copa.posicion.col] = COPA;
 
 	inicializar_obstaculos ( juego, laberinto_copia );
@@ -207,57 +227,46 @@ void inicializar_laberinto( juego_t* juego ){
 }
 
 bool es_movimiento_valido(juego_t* juego, char tecla){
+
 	bool es_valido = false;
 
-	if ( (tecla == IZQUIERDA) || (tecla == DERECHA) || (tecla == ARRIBA) || (tecla == ABAJO) ){
-		if ( (tecla == DERECHA) && (juego->laberinto_original[juego->jugador.posicion.fil][juego->jugador.posicion.col+1] != PARED) ){
-			es_valido = true;
-		}
-		if ( (tecla == ARRIBA) && (juego->laberinto_original[juego->jugador.posicion.fil-1][juego->jugador.posicion.col] != PARED) ){
-			es_valido = true;
-		}
-		if ( (tecla == IZQUIERDA) && (juego->laberinto_original[juego->jugador.posicion.fil][juego->jugador.posicion.col-1] != PARED) ){
-			es_valido = true;
-		}
-		if ( (tecla == ABAJO) && (juego->laberinto_original[juego->jugador.posicion.fil+1][juego->jugador.posicion.col] != PARED) ){
-			es_valido = true;
-		}
+ 	if ( (tecla == DERECHA) && (juego->laberinto_original[juego->jugador.posicion.fil][juego->jugador.posicion.col+1] != PARED) ){
+		es_valido = true;
 	}
-
+	if ( (tecla == ARRIBA) && (juego->laberinto_original[juego->jugador.posicion.fil-1][juego->jugador.posicion.col] != PARED) ){
+		es_valido = true;
+	}
+	if ( (tecla == IZQUIERDA) && (juego->laberinto_original[juego->jugador.posicion.fil][juego->jugador.posicion.col-1] != PARED) ){
+		es_valido = true;
+	}
+	if ( (tecla == ABAJO) && (juego->laberinto_original[juego->jugador.posicion.fil+1][juego->jugador.posicion.col] != PARED) ){
+		es_valido = true;
+	}
 	return es_valido;
 }
 
-char obtener_movimiento ( juego_t* juego ){
-	char tecla;
+void hacer_movimiento (coordenada_t* posicion, char direccion){
 
-	printf("Ingrese el la direccion la cual desea moverse: ( %c = izquierda, %c = derecha, %c = arriba, %c = abajo)\n", IZQUIERDA, DERECHA, ARRIBA, ABAJO);
-	scanf ( " %c", &tecla );
-
-	es_movimiento_valido ( juego, tecla );
-	while ( !es_movimiento_valido ( juego, tecla ) ){
-		scanf ( " %c", &tecla );
-		es_movimiento_valido ( juego, tecla );
-	}
-	return tecla;
-}
-
-void mover_jugador ( jugador_t jugador, char direccion ){
 	if ( direccion == DERECHA ){
-		jugador.posicion.col++;
+		posicion->col++;
 	}
 	if ( direccion == ABAJO ){
-		jugador.posicion.fil++;
+		posicion->fil++;
 	}
 	if ( direccion == IZQUIERDA ){
-		jugador.posicion.col--;
+		posicion->col--;
 	}
 	if ( direccion == ARRIBA ){
-		jugador.posicion.fil--;
+		posicion->fil--;
 	}
+}
+
+void mover_jugador ( jugador_t* jugador, char direccion ){
+
+	hacer_movimiento ( &(jugador->posicion), direccion );
 }
 
 void cambiar_direccion_rival ( rival_t *rival ){
-	rival->cantidad_pasos = MAXIMO_PASOS;
 
 	if ( rival->direccion == DERECHA ){
 		rival->direccion = ABAJO;
@@ -277,28 +286,141 @@ void mover_rival(juego_t* juego){
 
 	es_movimiento_valido ( juego, juego->rival.direccion );
 	juego->rival.cantidad_pasos--;
+
 	while ( !es_movimiento_valido ( juego, juego->rival.direccion ) ){
-		es_movimiento_valido (  juego, juego->rival.direccion );
 		juego->rival.cantidad_pasos--;
 		
 		if ( juego->rival.cantidad_pasos == SIN_PASOS ){
 			cambiar_direccion_rival ( &(juego->rival) );
+			juego->rival.cantidad_pasos = MAXIMO_PASOS;
 		}
 	}
-	if ( juego->rival.direccion == DERECHA ){
-		juego->rival.posicion.col++;
+	hacer_movimiento ( &(juego->rival.posicion), juego->rival.direccion );	
+}
+
+bool posiciones_iguales ( coordenada_t posicion_uno, coordenada_t posicion_dos ){
+
+	bool son_iguales = false;
+
+	if ( (posicion_uno.fil == posicion_dos.fil) && (posicion_uno.col == posicion_dos.col) ){
+		son_iguales = true;
 	}
-	if ( juego->rival.direccion == ABAJO ){
-		juego->rival.posicion.fil++;
+	return son_iguales;
+}
+
+void tomar_pocion ( jugador_t* jugador, int vida_a_recuperar ){
+
+	jugador->vida += vida_a_recuperar;
+
+	while ( jugador->vida > VIDA ){
+		jugador->vida--;
 	}
-	if ( juego->rival.direccion == IZQUIERDA ){
-		juego->rival.posicion.col--;
+}
+
+void actualizar_ayudas ( juego_t* juego ){
+
+	for ( int i = 0; i < TOTAL_AYUDAS; i++ ){
+		if ( posiciones_iguales (juego->jugador.posicion, juego->ayudas[i].posicion) ){
+
+			juego->jugador.ayudas[juego->jugador.tope_ayudas].codigo = juego->ayudas[i].codigo; 
+			juego->jugador.tope_ayudas++;
+
+			juego->ayudas[i] = juego->ayudas[juego->tope_ayudas];  
+			juego->tope_ayudas--;
+
+			if ( juego->ayudas[i].codigo == POCIONES ){
+				tomar_pocion ( &(juego->jugador), juego->ayudas[i].vida_a_recuperar );
+			}
+		}
 	}
-	if ( juego->rival.direccion == ARRIBA ){
-		juego->rival.posicion.fil--;
-	}	
+}
+
+bool tiene_hechizo_aprendido ( juego_t juego, char hechizo ){
+
+	bool si_tiene = false;
+
+	for ( int i = 0; i < juego.jugador.tope_ayudas; i++ ){
+		if ( juego.jugador.ayudas[i].codigo == hechizo ){
+			si_tiene = true;
+		}
+	}
+	return si_tiene;
+}
+
+void actualizar_obstaculos ( juego_t* juego ){
+
+	for ( int i = 0; i < juego->tope_obstaculos; i++ ){
+		if ( posiciones_iguales (juego->jugador.posicion, juego->obstaculos[i].posicion) ){
+
+			if ( (juego->obstaculos[i].codigo == ESCREGUTO) && (!tiene_hechizo_aprendido (*juego, IMPEDIMENTA)) ){
+				juego->jugador.vida -= juego->obstaculos[i].danio;
+			}
+			if ( (juego->obstaculos[i].codigo == BOGGART) && (!tiene_hechizo_aprendido (*juego, RIDDIKULUS)) ){
+				juego->jugador.vida -= juego->obstaculos[i].danio;
+			}
+			if ( juego->obstaculos[i].codigo == ACROMANTULA ){
+				juego->jugador.vida -= juego->obstaculos[i].danio;	
+			}
+			juego->obstaculos[i] = juego->obstaculos[juego->tope_obstaculos];  
+			juego->tope_obstaculos--;									
+		}
+	}
 }
 
 void actualizar_juego ( juego_t* juego ){
 
+	juego->jugador.vida -= VIDA_PERDIDA_PASO;
+
+	if ( juego->jugador.vida > SIN_VIDA ){
+
+		actualizar_ayudas ( juego );
+
+		actualizar_obstaculos ( juego );
+	}
+}
+
+int estado_juego(juego_t juego){
+
+	int estado = EN_CURSO;
+
+	if ( juego.jugador.vida <= SIN_VIDA ){
+		estado = DERROTA;
+	}else if ( posiciones_iguales (juego.jugador.posicion, juego.copa.posicion) ){
+		estado = VICTORIA;
+	}else if ( posiciones_iguales (juego.rival.posicion, juego.copa.posicion) ){
+		estado = DERROTA;
+	}
+	return estado;
+}
+
+bool puede_ver_la_copa ( juego_t juego ){
+
+	bool si_puede = false;
+
+	si_puede = tiene_hechizo_aprendido ( juego, ESFINGE );
+
+	if ( juego.jugador.vida >= POCA_VIDA ){
+		si_puede = true;
+	}
+	return si_puede;
+}
+
+void actualizar_laberinto(juego_t juego, char laberinto[TAMANIO][TAMANIO]){
+
+	copiar_matriz ( juego.laberinto_original, laberinto );
+
+	if ( puede_ver_la_copa (juego) ){
+		laberinto[juego.copa.posicion.fil][juego.copa.posicion.col] = juego.copa.codigo;
+	}
+	
+	for ( int i = 0; i < juego.tope_obstaculos; i++ ){
+		laberinto[juego.obstaculos[i].posicion.fil][juego.obstaculos[i].posicion.col] = juego.obstaculos[i].codigo;
+	}
+
+	for ( int i = 0; i < juego.tope_ayudas; i++ ){
+		laberinto[juego.ayudas[i].posicion.fil][juego.ayudas[i].posicion.col] = juego.ayudas[i].codigo;		
+	}
+
+	laberinto[juego.rival.posicion.fil][juego.rival.posicion.col] = RIVAL;
+	laberinto[juego.jugador.posicion.fil][juego.jugador.posicion.col] = JUGADOR;
 }
